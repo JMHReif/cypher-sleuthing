@@ -1,0 +1,294 @@
+= Queries
+
+== CASE:
+
+[source,cypher]
+----
+WITH date('2018-08-07') - duration('P1Y') as yearAgo
+MATCH (u:User)
+ WHERE u.dateJoined IS NOT NULL
+WITH u, 
+CASE
+    WHEN date(u.dateJoined) > yearAgo THEN 'new user'
+    WHEN date(u.dateJoined) < yearAgo THEN 'longterm user'
+    ELSE 'status unknown' END as userStatus
+RETURN u.displayName, u.dateJoined, userStatus LIMIT 10;
+----
+
+[source,cypher]
+----
+MATCH (u:User)-[:SENDS]->(:Payment)-[:PAID_USING]->(a:Application)
+WITH u, a, 
+CASE a.name
+    WHEN 'Venmo for iPhone' THEN 'iPhone'
+    WHEN 'Venmo for Android' THEN 'Android'
+    ELSE 'unknown' END as userPhoneType
+ SET u.phoneType = userPhoneType
+RETURN u.displayName, userPhoneType LIMIT 10;
+----
+
+
+== Temporals:
+
+=== Truncate
+
+[source,cypher]
+----
+WITH datetime('2018-07-26T16:05:30') as payDate
+MATCH (u:User)
+ WHERE u.dateJoined >= datetime.truncate('year',payDate)
+RETURN u.displayName, u.dateJoined LIMIT 10;
+----
+
+
+=== Format (APOC)
+
+[source,cypher]
+----
+WITH 1623958200 as sessionEnd
+RETURN apoc.date.format(sessionEnd, "s", "yyyy-MM-dd'T'HH:mm:ss") as formattedString;
+----
+
+[source,cypher]
+----
+WITH 1623958200 as sessionEnd
+RETURN apoc.date.format(sessionEnd, "s", "yyyy-MM-dd") as formattedDateString;
+----
+
+[source,cypher]
+----
+WITH 1623958200 as sessionEnd
+RETURN apoc.date.toISO8601(sessionEnd,’s’) as converted;
+----
+
+
+=== Date strings
+
+[source,cypher]
+----
+WITH '2021–06–17 19:00:00' as sessionStart
+RETURN apoc.date.convertFormat(sessionStart,"yyyy-MM-dd HH:mm:ss", 'iso_date_time') 
+as formattedString;
+----
+
+[source,cypher]
+----
+WITH '2021/06/17' as sessionDay
+RETURN apoc.date.convertFormat(sessionDay,"yyyy-MM-dd",'iso_date') as formattedDateString;
+----
+
+[source,cypher]
+----
+WITH '06/17/2021 19:00' as sessionDetails
+RETURN apoc.temporal.toZonedTemporal(sessionDetails,'MM/dd/yyyy HH:mm') as formattedString;
+----
+
+[source,cypher]
+----
+WITH 'Thu Jun 17 19:30:00 -0600 2021' as sessionEnd
+RETURN apoc.temporal.toZonedTemporal(sessionEnd,'EEE LLL dd HH:mm:ss Z yyyy') as cypherDatetime;
+----
+
+
+=== Duration
+
+[source,cypher]
+----
+MATCH (p:Payment)
+WHERE p.dateComplete IS NULL
+OR p.dateComplete > p.dateCreated + duration('P1D')
+RETURN p.paymentId, p.status, p.dateCreated, p.dateComplete LIMIT 10;
+----
+
+[source,cypher]
+----
+MATCH (u:User)-[:SENDS]->(p:Payment)
+WITH u, p ORDER BY p.dateCreated
+WITH u, collect(p.dateCreated) as payDates
+RETURN u.displayName, u.dateJoined, payDates[0], duration.between(u.dateJoined, payDates[0]) as firstUseTime
+ORDER BY firstUseTime LIMIT 10;
+----
+
+[source,cypher]
+----
+WITH datetime(‘2021-06-17T12:00:00’) as nodesStart
+RETURN duration.between(nodesStart, datetime()) as contentPresented;
+----
+
+[source,cypher]
+----
+MATCH (u:User)-[:SENDS]->(p:Payment)
+WITH u, p ORDER BY p.dateCreated
+WITH u, collect(p.dateCreated) as payDates
+RETURN u.displayName, u.dateJoined, payDates[0], duration.inMonths(u.dateJoined, payDates[0]).years as years, duration.inMonths(u.dateJoined, payDates[0]).monthsOfYear as months
+ORDER BY years DESC, months DESC LIMIT 10;
+----
+
+[source,cypher]
+----
+WITH datetime('2021-06-17T12:00:00') as nodesStart
+RETURN duration.inSeconds(nodesStart, datetime()).hours as hours, duration.inSeconds(nodesStart, datetime(')).minutesOfHour as minutes;
+----
+
+[source,cypher]
+----
+MATCH (u:User)-[r]-(p:Payment)
+RETURN u.displayName, duration.inSeconds(u.dateJoined, p.dateCreated).minutes as firstActivityMin, duration.inSeconds(u.dateJoined, p.dateCreated).secondsOfMinute as firstActivitySec 
+ORDER BY firstActivityMin, firstActivitySec LIMIT 20;
+----
+
+[source,cypher]
+----
+WITH datetime('2021-06-19T00:00:00') as weekend
+RETURN duration.inSeconds(datetime(), weekend).hours as timeTilWeekend;
+----
+
+[source,cypher]
+----
+WITH datetime('2021-06-30T23:59:59') as eom
+RETURN duration.inDays(datetime(), eom).weeks as weeks, duration.inDays(datetime(), eom).daysOfWeek as days;
+----
+
+
+=== APOC temporals
+
+[source,cypher]
+----
+WITH datetime('2021-06-30T23:59:59') as eom
+RETURN apoc.date.fields(apoc.temporal.format(eom, 'yyyy-MM-dd HH:mm:ss'),'yyyy-MM-dd HH:mm:ss');
+----
+
+[source,cypher]
+----
+WITH datetime() as now
+RETURN apoc.date.toYears(now.epochMillis), duration.inMonths(date('1970-01-01'), localDatetime(now)).years;
+----
+
+
+== Eager operator
+
+=== Compare example #1
+
+[source,cypher]
+----
+//Eager
+PROFILE
+WITH 'https://raw.githubusercontent.com/JMHReif/nodes2021-aura-training/main/venmo_demo.csv' as file
+LOAD CSV WITH HEADERS FROM file AS line
+MERGE (app:Application {applicationId: line.`app.id`})
+ON CREATE SET app.name = line.`app.name`, app.description = line.`app.description`, 
+app.imageURL = line.`app.image_url`
+WITH line, app
+MERGE (pay:Payment {paymentId: line.`payment.id`})
+ ON CREATE SET pay.audience = line.audience, pay.dateCreated = datetime(line.`payment.date_created`), pay.status = line.`payment.status`, 
+ pay.note = line.`payment.note`, pay.action = line.`payment.action`, pay.type = line.type, 
+ pay.dateComplete = CASE 
+    WHEN coalesce(line.`payment.date_completed`,"") = "" THEN null 
+    ELSE datetime(line.`payment.date_completed`) END
+WITH line, app, pay
+MERGE (pay)-[r2:PAID_USING]->(app)
+RETURN count(*);
+----
+
+[source,cypher]
+----
+//non-Eager
+PROFILE
+WITH 'https://raw.githubusercontent.com/JMHReif/nodes2021-aura-training/main/venmo_demo.csv' as file
+LOAD CSV WITH HEADERS FROM file AS line
+MERGE (app:Application {applicationId: line.`app.id`})
+ ON CREATE SET app.name = line.`app.name`, app.description = line.`app.description`, app.imageURL = line.`app.image_url`
+WITH line, app
+MERGE (pay:Payment {paymentId: line.`payment.id`})
+ ON CREATE SET pay.audience = line.audience, pay.dateCreated = datetime(line.`payment.date_created`), pay.status = line.`payment.status`, 
+ pay.note = line.`payment.note`, pay.action = line.`payment.action`, pay.type = line.type, 
+ pay.dateComplete = CASE 
+    WHEN coalesce(line.`payment.date_completed`,"") = "" THEN null 
+    ELSE datetime(line.`payment.date_completed`) END
+WITH line, app, pay
+MERGE (pay)-[r2:PAID_USING]->(app);
+----
+
+=== Compare example #2
+
+[source,cypher]
+----
+//Eager
+EXPLAIN
+WITH 'https://raw.githubusercontent.com/JMHReif/nodes2021-aura-training/main/venmo_demo.csv' as file
+LOAD CSV WITH HEADERS FROM file AS line
+MERGE (app:Application {applicationId: line.`app.id`})
+WITH line, app
+MERGE (pay:Payment {paymentId: line.`payment.id`})
+WITH line, app, pay
+MATCH (p:Payment {paymentId: line.`payment.id`})
+MERGE (p)-[r2:PAID_USING]->(app);
+----
+
+[source,cypher]
+----
+//non-Eager
+EXPLAIN
+WITH 'https://raw.githubusercontent.com/JMHReif/nodes2021-aura-training/main/venmo_demo.csv' as file
+LOAD CSV WITH HEADERS FROM file AS line
+MERGE (app:Application {applicationId: line.`app.id`})
+WITH line, app
+MERGE (pay:Payment {paymentId: line.`payment.id`})
+WITH line, app, pay
+MERGE (pay)-[r2:PAID_USING]->(app);
+----
+
+=== Compare example #3
+
+[source,cypher]
+----
+//Eager
+PROFILE
+WITH 'https://raw.githubusercontent.com/JMHReif/nodes2021-aura-training/main/venmo_demo.csv' as file
+LOAD CSV WITH HEADERS FROM file AS line
+MERGE (from:User {userId: line.`payment.actor.id`})
+WITH line, from
+MATCH (pay:Payment {paymentId: line.`payment.id`})
+MERGE (from)-[r:SENDS]->(pay)
+RETURN count(*);
+----
+
+[source,cypher]
+----
+//non-Eager
+PROFILE
+WITH 'https://raw.githubusercontent.com/JMHReif/nodes2021-aura-training/main/venmo_demo.csv' as file
+LOAD CSV WITH HEADERS FROM file AS line
+MERGE (from:User {userId: line.`payment.actor.id`})
+WITH line, from
+MATCH (pay:Payment {paymentId: line.`payment.id`})
+MERGE (from)-[r:SENDS]->(pay);
+----
+
+=== Compare example #4
+
+[source,cypher]
+----
+//Eager
+EXPLAIN
+WITH 'https://raw.githubusercontent.com/JMHReif/nodes2021-aura-training/main/venmo_demo.csv' as file
+LOAD CSV WITH HEADERS FROM file AS line
+MERGE (from:User {userId: line.`payment.actor.id`})
+WITH line
+MATCH (u:User {userId: line.`payment.actor.id`})
+ SET u.dateJoined = datetime(line.`payment.actor.date_joined`);
+----
+
+[source,cypher]
+----
+EXPLAIN
+WITH 'https://raw.githubusercontent.com/JMHReif/nodes2021-aura-training/main/venmo_demo.csv' as file
+LOAD CSV WITH HEADERS FROM file AS line
+MERGE (from:User {userId: line.`payment.actor.id`});
+
+EXPLAIN
+WITH 'https://raw.githubusercontent.com/JMHReif/nodes2021-aura-training/main/venmo_demo.csv' as file
+LOAD CSV WITH HEADERS FROM file AS line
+MATCH (u:User {userId: line.`payment.actor.id`})
+ SET u.dateJoined = datetime(line.`payment.actor.date_joined`)
+----

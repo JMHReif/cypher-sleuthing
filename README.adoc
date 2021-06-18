@@ -1,0 +1,11 @@
+= NODES 2021: Cypher Sleuthing session
+
+This repository contains the notes, queries, and data set for recreating content that was covered in the Cypher Sleuthing session at https://neo4j.brand.live/c/2021nodes-homepage[NODES 2021^].
+
+Slides are published as a https://speakerdeck.com/jmhreif/cypher-sleuthing-taking-your-skills-to-the-next-level[deck on SpeakerDeck^].
+
+== Contact presenter
+* Name: Jennifer Reif
+* Email: mailto:jennifer.reif@neo4j.com[jennifer.reif@neo4j.com^]
+* Twitter: https://twitter.com/jmhreif[@JMHReif^]
+* LinkedIn: https://www.linkedin.com/in/jmhreif/[jmhreif^]
