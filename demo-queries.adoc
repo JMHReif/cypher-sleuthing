@@ -1,0 +1,173 @@
+= KCDC demo queries
+
+== Setup:
+
+You can create a https://dev.neo4j.com/aura[free cloud instance of Neo4j Aura^], load the data with the query below, then run the queries in the next sections to recreate the demo!
+
+[source,cypher]
+----
+WITH [date('2021-09-15'), date('2021-09-16'), date('2021-09-17')] as kcdcDays
+UNWIND kcdcDays as day
+MERGE (d:KcdcDay {date: day})
+RETURN d;
+----
+
+== CASE statement
+
+[source,cypher]
+----
+//Report a meaningful value based on the conference day
+MATCH (d:KcdcDay)
+WITH collect(d.date) as kcdc
+UNWIND kcdc as day
+WITH day, CASE day
+  WHEN date('2021-09-15') THEN 'workshops'
+  WHEN date('2021-09-16') THEN 'conf1stDay'
+  WHEN date('2021-09-17') THEN 'conf2ndDay'
+  ELSE 'party' END as what
+RETURN day, what;
+----
+
+[source,cypher]
+----
+//Set the related startTime for each day
+MATCH (d:KcdcDay)
+WITH d, collect(d.date) as kcdc
+UNWIND kcdc as day
+WITH d, day, CASE day
+  WHEN date('2021-09-15') THEN time('08:00')
+  WHEN date('2021-09-16') THEN time('08:45')
+  WHEN date('2021-09-17') THEN time('08:30')
+  ELSE time('07:30') END as start
+SET d.startTime = start
+RETURN d.date, d.startTime;
+----
+
+[source,cypher]
+----
+//Set the related endTime for each day
+MATCH (d:KcdcDay)
+WITH d, collect(d.date) as kcdc
+UNWIND kcdc as day
+WITH d, day, CASE day
+  WHEN date('2021-09-15') THEN time('17:00')
+  WHEN date('2021-09-16') THEN time('16:45')
+  WHEN date('2021-09-17') THEN time('16:30')
+  ELSE time('07:30') END as end
+SET d.endTime = end
+RETURN d.date, d.endTime;
+----
+
+== Truncate
+
+[source,cypher]
+----
+//Use truncate with CASE to find out what to do 2021-09-01
+WITH date.truncate('month',date()) as date
+WITH date, CASE date
+  WHEN date('2021-09-15') THEN 'workshops'
+  WHEN date('2021-09-16') THEN 'conf1stDay'
+  WHEN date('2021-09-17') THEN 'conf2ndDay'
+  ELSE 'party' END as what
+RETURN date, what;
+----
+
+== APOC
+
+=== Convert epoch time to string
+
+[source,cypher]
+----
+//Format epoch datetime as ISO 8601 datetime string
+WITH 1631889000 as sessionEnd
+RETURN apoc.date.format(sessionEnd, "s", "yyyy-MM-dd'T'HH:mm:ss") 
+as formattedString;
+----
+
+[source,cypher]
+----
+//Format epoch datetime as ISO 8601 date string
+WITH 1631889000 as sessionEnd
+RETURN apoc.date.format(sessionEnd, "s", "yyyy-MM-dd") as formattedDateString;
+----
+
+[source,cypher]
+----
+WITH 1631889000 as sessionEnd
+RETURN apoc.date.toISO8601(sessionEnd,"s") as converted;
+----
+
+=== Epoch to Neo4j temporal
+
+[source,cypher]
+----
+//Format epoch datetime as Neo4j temporal
+WITH 1631889000 as sessionEnd
+RETURN datetime({epochSeconds: sessionEnd}) as neo4jTemporal;
+----
+
+=== Date string to ISO 8601 string
+
+[source,cypher]
+----
+//Convert datetime string to ISO 8601 string
+WITH '2021-09-17 08:30:00' as sessionStart
+RETURN apoc.date.convertFormat(sessionStart,"yyyy-MM-dd HH:mm:ss", 'iso_date_time') as formattedString;
+----
+
+[source,cypher]
+----
+//Convert date string to ISO 8601 string
+WITH '2021/09/17' as sessionDay
+RETURN apoc.date.convertFormat(sessionDay,"yyyy/MM/dd",'iso_date') as formattedDateString;
+----
+
+=== String to Neo4j temporal
+
+[source,cypher]
+----
+//Convert datetime string to Neo4j temporal
+WITH '2021-09-17 09:30:00' as sessionEnd
+RETURN apoc.temporal.toZonedTemporal(sessionEnd,'yyyy-MM-dd HH:mm:SS');
+----
+
+== Durations
+
+[source,cypher]
+----
+//Duration between 2 datetimes (seconds results)
+WITH datetime('2021-09-17T08:30:00') as dayStart
+RETURN duration.between(dayStart,datetime()) as contentPresented;
+----
+
+[source,cypher]
+----
+//Duration between 2 datetimes (days+seconds results)
+WITH datetime('2021-09-15T08:00:00') as kcdcStart
+RETURN duration.between(kcdcStart,datetime()) as contentPresented;
+----
+
+[source,cypher]
+----
+//Duration conversion to all seconds, translate to hours
+WITH datetime('2021-09-15T08:00:00') as kcdcStart
+RETURN duration.inSeconds(kcdcStart,datetime()).hours as contentHours;
+----
+
+== Eager vs non-eager
+
+[source,cypher]
+----
+//Non eager
+PROFILE
+MATCH (d:KcdcDay)
+RETURN d.date;
+----
+
+[source,cypher]
+----
+//Eager
+PROFILE
+MATCH (d:KcdcDay)
+RETURN d.date, count(*);
+----
