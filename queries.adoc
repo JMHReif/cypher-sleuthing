@@ -66,26 +66,26 @@ RETURN apoc.date.toISO8601(sessionEnd,’s’) as converted;
 
 [source,cypher]
 ----
-WITH '2021–09–17 08:30:00' as sessionStart
+WITH '2021–06–17 19:00:00' as sessionStart
 RETURN apoc.date.convertFormat(sessionStart,"yyyy-MM-dd HH:mm:ss", 'iso_date_time') 
 as formattedString;
 ----
 
 [source,cypher]
 ----
-WITH '2021/09/17' as sessionDay
+WITH '2021/06/17' as sessionDay
 RETURN apoc.date.convertFormat(sessionDay,"yyyy-MM-dd",'iso_date') as formattedDateString;
 ----
 
 [source,cypher]
 ----
-WITH '09/17/2021 08:30' as sessionDetails
+WITH '06/17/2021 19:00' as sessionDetails
 RETURN apoc.temporal.toZonedTemporal(sessionDetails,'MM/dd/yyyy HH:mm') as formattedString;
 ----
 
 [source,cypher]
 ----
-WITH 'Fri Sep 17 09:30:00 -0600 2021' as sessionEnd
+WITH 'Thu Jun 17 19:30:00 -0600 2021' as sessionEnd
 RETURN apoc.temporal.toZonedTemporal(sessionEnd,'EEE LLL dd HH:mm:ss Z yyyy') as cypherDatetime;
 ----
 
@@ -111,8 +111,8 @@ ORDER BY firstUseTime LIMIT 10;
 
 [source,cypher]
 ----
-WITH datetime(‘2021-09-17T07:30:00’) as kcdcStart
-RETURN duration.between(kcdcStart, datetime()) as contentPresented;
+WITH datetime('2021-06-17T12:00:00') as nodesStart
+RETURN duration.between(nodesStart, datetime()) as contentPresented;
 ----
 
 [source,cypher]
@@ -126,8 +126,8 @@ ORDER BY years DESC, months DESC LIMIT 10;
 
 [source,cypher]
 ----
-WITH datetime('2021-09-17T08:30:00') as kcdcStart
-RETURN duration.inSeconds(kcdcStart, datetime()).hours as hours, duration.inSeconds(kcdcStart, datetime()).minutesOfHour as minutes;
+WITH datetime('2021-06-17T12:00:00') as nodesStart
+RETURN duration.inSeconds(nodesStart, datetime()).hours as hours, duration.inSeconds(nodesStart, datetime()).minutesOfHour as minutes;
 ----
 
 [source,cypher]
@@ -139,13 +139,13 @@ ORDER BY firstActivityMin, firstActivitySec LIMIT 20;
 
 [source,cypher]
 ----
-WITH datetime('2021-09-18T00:00:00') as weekend
+WITH datetime('2021-06-19T00:00:00') as weekend
 RETURN duration.inSeconds(datetime(), weekend).hours as timeTilWeekend;
 ----
 
 [source,cypher]
 ----
-WITH datetime('2021-09-30T23:59:59') as eom
+WITH datetime('2021-06-30T23:59:59') as eom
 RETURN duration.inDays(datetime(), eom).weeks as weeks, duration.inDays(datetime(), eom).daysOfWeek as days;
 ----
 
@@ -154,7 +154,7 @@ RETURN duration.inDays(datetime(), eom).weeks as weeks, duration.inDays(datetime
 
 [source,cypher]
 ----
-WITH datetime('2021-09-30T23:59:59') as eom
+WITH datetime('2021-06-30T23:59:59') as eom
 RETURN apoc.date.fields(apoc.temporal.format(eom, 'yyyy-MM-dd HH:mm:ss'),'yyyy-MM-dd HH:mm:ss');
 ----
 
