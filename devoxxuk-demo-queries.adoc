@@ -96,7 +96,7 @@ RETURN datetime({epochSeconds: sessionEnd}) as neo4jTemporal;
 [source,cypher]
 ----
 //Convert datetime string to ISO 8601 string
-WITH '2021-11-02 10:20:00' as sessionStart
+WITH '2021-11-02 09:30:00' as sessionStart
 RETURN apoc.date.convertFormat(sessionStart,"yyyy-MM-dd HH:mm:ss", 'iso_date_time') as formattedString;
 ----
 
@@ -143,7 +143,8 @@ RETURN duration.inSeconds(devoxxukStart,datetime()).hours as contentHours;
 ----
 //Duration conversion translate to hours+minutesOfHour
 WITH datetime('2021-11-01T09:00:00') as devoxxukStart
-RETURN duration.inSeconds(devoxxukStart,datetime()).hours as hours, duration.inSeconds(devoxxukStart,datetime()).minutesOfHour as minutesOfHour;
+RETURN duration.inSeconds(devoxxukStart,datetime()).hours as hours, 
+ duration.inSeconds(devoxxukStart,datetime()).minutesOfHour as minutesOfHour;
 ----
 
 == Eager vs non-eager
