@@ -64,6 +64,16 @@ WITH date, CASE
 RETURN date, what;
 ----
 
+[source,cypher]
+----
+WITH date.truncate('month',date()) as date
+WITH date, CASE date
+ WHEN date('2021-12-08') THEN 'get ready'
+ WHEN date('2021-12-09') THEN 'learn'
+ ELSE 'party' END as what
+RETURN date, what
+----
+
 == APOC
 
 === Convert epoch time to string
@@ -134,16 +144,23 @@ RETURN duration.between(dayStart,datetime()) as contentPresented;
 
 [source,cypher]
 ----
-//Duration between 2 datetimes (days+seconds results)
+//Duration between 2 datetimes (time results)
 WITH datetime('2021-12-09T08:00:00') as workStart
 RETURN duration.between(workStart,datetime()) as worked;
 ----
 
 [source,cypher]
 ----
-//Duration conversion to hours
+//Duration hours
 WITH datetime('2021-12-09T08:00:00') as workStart
 RETURN duration(workStart,datetime()).hours as workHours;
+----
+
+[source,cypher]
+----
+//Duration hours (lossy value, not converting)
+WITH datetime('2021-12-06T08:00:00') as weekStart
+RETURN duration.between(weekStart, datetime()) as worked, duration.between(weekStart, datetime()).hours as hours;
 ----
 
 [source,cypher]
@@ -151,6 +168,13 @@ RETURN duration(workStart,datetime()).hours as workHours;
 //Duration conversion to all seconds, translate to hours
 WITH datetime('2021-12-06T08:00:00') as weekStart
 RETURN duration.inSeconds(weekStart,datetime()).hours as weekHours;
+----
+
+[source,cypher]
+----
+//Duration conversion to time, translate hours+minutes
+WITH datetime('2021-12-06T08:00:00') as weekStart
+RETURN duration.between(weekStart, datetime()) as worked, duration.inSeconds(weekStart, datetime()).hours as hours, duration.inSeconds(weekStart, datetime()).minutesOfHour as minutes;
 ----
 
 == Eager vs non-eager
