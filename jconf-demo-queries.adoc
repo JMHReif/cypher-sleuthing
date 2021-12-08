@@ -1,0 +1,172 @@
+= JConf demo queries
+
+== Setup:
+
+You can create a https://dev.neo4j.com/aura[free cloud instance of Neo4j Aura^], load the data with the query below, then run the queries in the next sections to recreate the demo!
+
+[source,cypher]
+----
+WITH date('2021-12-09') as day
+MERGE (d:JConfDay {date: day})
+ SET d.startTime = time('10:00'), d.endTime = time('19:00')
+RETURN d;
+----
+
+== CASE statement
+
+[source,cypher]
+----
+//Report a meaningful value based on the day
+WITH date() as today
+MATCH (d:JConfDay)
+WITH today, d, CASE 
+  WHEN today < d.date THEN 'get ready'
+  WHEN today = d.date THEN 'learn'
+  ELSE 'party' END as what
+RETURN today, what;
+----
+
+[source,cypher]
+----
+//Report value based on time (in certain zone)
+WITH time({timezone: 'America/New York'}) as now
+MATCH (d:JConfDay)
+WITH now, d, CASE
+ WHEN now < d.startTime THEN 'starting soon'
+ WHEN d.startTime <= now <= d.endTime THEN 'LIVE'
+ ELSE 'ended' END as status
+RETURN now, status;
+----
+
+[source,cypher]
+----
+//Set conference type based on value
+WITH 'covid' as param //['covid','no-covid']
+MATCH (d:JConfDay)
+WITH d, param, CASE param
+  WHEN 'covid' THEN 'virtual'
+  WHEN 'no-covid' THEN 'in-person'
+  ELSE 'unknown' END as type
+SET d.confType = type
+RETURN param, type;
+----
+
+== Truncate
+
+[source,cypher]
+----
+//Use truncate with CASE to find out what to do 2021-12-01
+WITH date.truncate('month',date()) as date
+WITH date, CASE
+  WHEN date < date('2021-12-09') THEN 'get ready'
+  WHEN date = date('2021-12-09') THEN 'learn'
+  ELSE 'party' END as what
+RETURN date, what;
+----
+
+== APOC
+
+=== Convert epoch time to string
+
+[source,cypher]
+----
+//Format epoch datetime as ISO 8601 datetime string
+WITH 1639058400 as sessionEnd
+RETURN apoc.date.format(sessionEnd, "s", "yyyy-MM-dd'T'HH:mm:ss") 
+as formattedString;
+----
+
+[source,cypher]
+----
+//Format epoch datetime as ISO 8601 date string
+WITH 1639058400 as sessionEnd
+RETURN apoc.date.format(sessionEnd, "s", "yyyy-MM-dd") as formattedDateString;
+----
+
+[source,cypher]
+----
+WITH 1639058400 as sessionEnd
+RETURN apoc.date.toISO8601(sessionEnd,"s") as converted;
+----
+
+=== Epoch to Neo4j temporal
+
+[source,cypher]
+----
+//Format epoch datetime as Neo4j temporal
+WITH 1639058400 as sessionEnd
+RETURN datetime({epochSeconds: sessionEnd}) as neo4jTemporal;
+----
+
+=== Date string to ISO 8601 string
+
+[source,cypher]
+----
+//Convert datetime string to ISO 8601 string
+WITH '2021-12-09 13:00:00' as sessionStart
+RETURN apoc.date.convertFormat(sessionStart,"yyyy-MM-dd HH:mm:ss", 'iso_date_time') as formattedString;
+----
+
+[source,cypher]
+----
+//Convert date string to ISO 8601 string
+WITH '2021/12/09' as sessionDay
+RETURN apoc.date.convertFormat(sessionDay,"yyyy/MM/dd",'iso_date') as formattedDateString;
+----
+
+=== String to Neo4j temporal
+
+[source,cypher]
+----
+//Convert datetime string to Neo4j temporal
+WITH '2021-12-09 14:00:00' as sessionEnd
+RETURN apoc.temporal.toZonedTemporal(sessionEnd,'yyyy-MM-dd HH:mm:SS');
+----
+
+== Durations
+
+[source,cypher]
+----
+//Duration between 2 datetimes (seconds results)
+WITH datetime('2021-12-09T10:00:00') as dayStart
+RETURN duration.between(dayStart,datetime()) as contentPresented;
+----
+
+[source,cypher]
+----
+//Duration between 2 datetimes (days+seconds results)
+WITH datetime('2021-12-09T08:00:00') as workStart
+RETURN duration.between(workStart,datetime()) as worked;
+----
+
+[source,cypher]
+----
+//Duration conversion to hours
+WITH datetime('2021-12-09T08:00:00') as workStart
+RETURN duration(workStart,datetime()).hours as workHours;
+----
+
+[source,cypher]
+----
+//Duration conversion to all seconds, translate to hours
+WITH datetime('2021-12-06T08:00:00') as weekStart
+RETURN duration.inSeconds(weekStart,datetime()).hours as weekHours;
+----
+
+== Eager vs non-eager
+
+[source,cypher]
+----
+//Non eager
+PROFILE
+MATCH (d:JConfDay)
+RETURN d.date;
+----
+
+[source,cypher]
+----
+//Eager
+PROFILE
+MATCH (d:JConfDay)
+RETURN d.date, count(*);
+----
