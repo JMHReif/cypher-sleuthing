@@ -81,7 +81,7 @@ RETURN date, what
 [source,cypher]
 ----
 //Format epoch datetime as ISO 8601 datetime string
-WITH 1639058400 as sessionEnd
+WITH 1639080000 as sessionEnd
 RETURN apoc.date.format(sessionEnd, "s", "yyyy-MM-dd'T'HH:mm:ss") 
 as formattedString;
 ----
@@ -89,13 +89,13 @@ as formattedString;
 [source,cypher]
 ----
 //Format epoch datetime as ISO 8601 date string
-WITH 1639058400 as sessionEnd
+WITH 1639080000 as sessionEnd
 RETURN apoc.date.format(sessionEnd, "s", "yyyy-MM-dd") as formattedDateString;
 ----
 
 [source,cypher]
 ----
-WITH 1639058400 as sessionEnd
+WITH 1639080000 as sessionEnd
 RETURN apoc.date.toISO8601(sessionEnd,"s") as converted;
 ----
 
@@ -104,7 +104,7 @@ RETURN apoc.date.toISO8601(sessionEnd,"s") as converted;
 [source,cypher]
 ----
 //Format epoch datetime as Neo4j temporal
-WITH 1639058400 as sessionEnd
+WITH 1639080000 as sessionEnd
 RETURN datetime({epochSeconds: sessionEnd}) as neo4jTemporal;
 ----
 
@@ -113,7 +113,7 @@ RETURN datetime({epochSeconds: sessionEnd}) as neo4jTemporal;
 [source,cypher]
 ----
 //Convert datetime string to ISO 8601 string
-WITH '2021-12-09 13:00:00' as sessionStart
+WITH '2021-12-09 14:00:00-05:00' as sessionStart
 RETURN apoc.date.convertFormat(sessionStart,"yyyy-MM-dd HH:mm:ss", 'iso_date_time') as formattedString;
 ----
 
@@ -129,7 +129,7 @@ RETURN apoc.date.convertFormat(sessionDay,"yyyy/MM/dd",'iso_date') as formattedD
 [source,cypher]
 ----
 //Convert datetime string to Neo4j temporal
-WITH '2021-12-09 14:00:00' as sessionEnd
+WITH '2021-12-09 15:00:00' as sessionEnd
 RETURN apoc.temporal.toZonedTemporal(sessionEnd,'yyyy-MM-dd HH:mm:SS');
 ----
 
@@ -138,43 +138,43 @@ RETURN apoc.temporal.toZonedTemporal(sessionEnd,'yyyy-MM-dd HH:mm:SS');
 [source,cypher]
 ----
 //Duration between 2 datetimes (seconds results)
-WITH datetime('2021-12-09T10:00:00') as dayStart
-RETURN duration.between(dayStart,datetime()) as contentPresented;
+WITH datetime('2021-12-09T10:00:00-05:00') as dayStart
+RETURN duration.between(dayStart,datetime({timezone: 'America/New York'})) as contentPresented;
 ----
 
 [source,cypher]
 ----
 //Duration between 2 datetimes (time results)
-WITH datetime('2021-12-09T08:00:00') as workStart
-RETURN duration.between(workStart,datetime()) as worked;
+WITH datetime('2021-12-09T08:00:00-05:00') as workStart
+RETURN duration.between(workStart,datetime({timezone: 'America/New York'})) as worked;
 ----
 
 [source,cypher]
 ----
 //Duration hours
-WITH datetime('2021-12-09T08:00:00') as workStart
-RETURN duration(workStart,datetime()).hours as workHours;
+WITH datetime('2021-12-09T08:00:00-05:00') as workStart
+RETURN duration(workStart,datetime({timezone: 'America/New York'})).hours as workHours;
 ----
 
 [source,cypher]
 ----
 //Duration hours (lossy value, not converting)
-WITH datetime('2021-12-06T08:00:00') as weekStart
-RETURN duration.between(weekStart, datetime()) as worked, duration.between(weekStart, datetime()).hours as hours;
+WITH datetime('2021-12-06T08:00:00-05:00') as weekStart
+RETURN duration.between(weekStart, datetime({timezone: 'America/New York'})) as worked, duration.between(weekStart, datetime({timezone: 'America/New York'})).hours as hours;
 ----
 
 [source,cypher]
 ----
 //Duration conversion to all seconds, translate to hours
-WITH datetime('2021-12-06T08:00:00') as weekStart
-RETURN duration.inSeconds(weekStart,datetime()).hours as weekHours;
+WITH datetime('2021-12-06T08:00:00-05:00') as weekStart
+RETURN duration.inSeconds(weekStart,datetime({timezone: 'America/New York'})).hours as weekHours;
 ----
 
 [source,cypher]
 ----
 //Duration conversion to time, translate hours+minutes
-WITH datetime('2021-12-06T08:00:00') as weekStart
-RETURN duration.between(weekStart, datetime()) as worked, duration.inSeconds(weekStart, datetime()).hours as hours, duration.inSeconds(weekStart, datetime()).minutesOfHour as minutes;
+WITH datetime('2021-12-06T08:00:00-05:00') as weekStart
+RETURN duration.between(weekStart, datetime({timezone: 'America/New York'})) as worked, duration.inSeconds(weekStart, datetime({timezone: 'America/New York'})).hours as hours, duration.inSeconds(weekStart, datetime({timezone: 'America/New York'})).minutesOfHour as minutes;
 ----
 
 == Eager vs non-eager
