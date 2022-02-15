@@ -1,14 +1,14 @@
-= JConf 2021 demo queries
+= Confoo 2022 demo queries
 
 == Setup:
 
-You can create a https://dev.neo4j.com/aura[free cloud instance of Neo4j Aura^], load the data with the query below, then run the queries in the next sections to recreate the demo!
+You can create a https://dev.neo4j.com/aura[free cloud instance of Neo4j AuraDB^], load the data with the query below, then run the queries in the next sections to recreate the demo!
 
 [source,cypher]
 ----
-WITH date('2021-12-09') as day
-MERGE (d:JConfDay {date: day})
- SET d.startTime = time('10:00'), d.endTime = time('19:00')
+WITH [date('2022-02-23'), date('2022-02-24'), date('2022-02-25')] as confDays
+UNWIND confDays as day
+MERGE (d:ConfDay {date: day})
 RETURN d;
 ----
 
@@ -16,50 +16,58 @@ RETURN d;
 
 [source,cypher]
 ----
-//Report a meaningful value based on the day
-WITH date() as today
-MATCH (d:JConfDay)
-WITH today, d, CASE 
-  WHEN today < d.date THEN 'get ready'
-  WHEN today = d.date THEN 'learn'
+//Report a meaningful value based on the conference day
+MATCH (d:ConfDay)
+WITH collect(d.date) as conf
+UNWIND conf as day
+WITH day, CASE day
+  WHEN date('2022-02-23') THEN 'conf1stDay'
+  WHEN date('2022-02-24') THEN 'conf2ndDay'
+  WHEN date('2022-02-25') THEN 'conf3rdDay'
   ELSE 'party' END as what
-RETURN today, what;
+RETURN day, what;
 ----
 
 [source,cypher]
 ----
-//Report value based on time (in certain zone)
-WITH time({timezone: 'America/New York'}) as now
-MATCH (d:JConfDay)
-WITH now, d, CASE
- WHEN now < d.startTime THEN 'starting soon'
- WHEN d.startTime <= now <= d.endTime THEN 'LIVE'
- ELSE 'ended' END as status
-RETURN now, status;
+//Set the related startTime for each day
+MATCH (d:ConfDay)
+WITH d, collect(d.date) as conf
+UNWIND conf as day
+WITH d, day, CASE day
+  WHEN date('2022-02-23') THEN time('07:30')
+  WHEN date('2022-02-24') THEN time('09:00')
+  WHEN date('2022-02-25') THEN time('09:00')
+  ELSE time('08:00') END as start
+SET d.startTime = start
+RETURN d.date, d.startTime;
 ----
 
 [source,cypher]
 ----
-//Set conference type based on value
-WITH 'covid' as param //['covid','no-covid']
-MATCH (d:JConfDay)
-WITH d, param, CASE param
-  WHEN 'covid' THEN 'virtual'
-  WHEN 'no-covid' THEN 'in-person'
-  ELSE 'unknown' END as type
-SET d.confType = type
-RETURN param, type;
+//Set the related endTime for each day
+MATCH (d:ConfDay)
+WITH d, collect(d.date) as conf
+UNWIND conf as day
+WITH d, day, CASE day
+  WHEN date('2022-02-23') THEN time('17:00')
+  WHEN date('2022-02-24') THEN time('16:00')
+  WHEN date('2022-02-25') THEN time('16:00')
+  ELSE time('17:00') END as end
+SET d.endTime = end
+RETURN d.date, d.endTime;
 ----
 
 == Truncate
 
 [source,cypher]
 ----
-//Use truncate with CASE to find out what to do 2021-12-01
+//Use truncate with CASE to find out what to do 2022-02-01
 WITH date.truncate('month',date()) as date
-WITH date, CASE
-  WHEN date < date('2021-12-09') THEN 'get ready'
-  WHEN date = date('2021-12-09') THEN 'learn'
+WITH date, CASE date
+  WHEN date('2022-02-23') THEN 'conf1stDay'
+  WHEN date('2022-02-24') THEN 'conf2ndDay'
+  WHEN date('2022-02-25') THEN 'conf3rdDay'
   ELSE 'party' END as what
 RETURN date, what;
 ----
@@ -67,9 +75,9 @@ RETURN date, what;
 [source,cypher]
 ----
 WITH date.truncate('month',date()) as date
-WITH date, CASE date
- WHEN date('2021-12-08') THEN 'get ready'
- WHEN date('2021-12-09') THEN 'learn'
+WITH date, CASE
+ WHEN date < date('2022-02-23') THEN 'get ready'
+ WHEN date('2022-02-23') <= date <= date('2022-02-25') THEN 'learn'
  ELSE 'party' END as what
 RETURN date, what
 ----
@@ -81,7 +89,7 @@ RETURN date, what
 [source,cypher]
 ----
 //Format epoch datetime as ISO 8601 datetime string
-WITH 1639080000 as sessionEnd
+WITH 1645729200 as sessionEnd
 RETURN apoc.date.format(sessionEnd, "s", "yyyy-MM-dd'T'HH:mm:ss") 
 as formattedString;
 ----
@@ -89,13 +97,13 @@ as formattedString;
 [source,cypher]
 ----
 //Format epoch datetime as ISO 8601 date string
-WITH 1639080000 as sessionEnd
+WITH 1645729200 as sessionEnd
 RETURN apoc.date.format(sessionEnd, "s", "yyyy-MM-dd") as formattedDateString;
 ----
 
 [source,cypher]
 ----
-WITH 1639080000 as sessionEnd
+WITH 1645729200 as sessionEnd
 RETURN apoc.date.toISO8601(sessionEnd,"s") as converted;
 ----
 
@@ -104,7 +112,7 @@ RETURN apoc.date.toISO8601(sessionEnd,"s") as converted;
 [source,cypher]
 ----
 //Format epoch datetime as Neo4j temporal
-WITH 1639080000 as sessionEnd
+WITH 1645729200 as sessionEnd
 RETURN datetime({epochSeconds: sessionEnd}) as neo4jTemporal;
 ----
 
@@ -113,14 +121,14 @@ RETURN datetime({epochSeconds: sessionEnd}) as neo4jTemporal;
 [source,cypher]
 ----
 //Convert datetime string to ISO 8601 string
-WITH '2021-12-09 14:00:00-05:00' as sessionStart
+WITH '2022-02-24 13:15:00-05:00' as sessionStart
 RETURN apoc.date.convertFormat(sessionStart,"yyyy-MM-dd HH:mm:ss", 'iso_date_time') as formattedString;
 ----
 
 [source,cypher]
 ----
 //Convert date string to ISO 8601 string
-WITH '2021/12/09' as sessionDay
+WITH '2022/02/24' as sessionDay
 RETURN apoc.date.convertFormat(sessionDay,"yyyy/MM/dd",'iso_date') as formattedDateString;
 ----
 
@@ -129,7 +137,7 @@ RETURN apoc.date.convertFormat(sessionDay,"yyyy/MM/dd",'iso_date') as formattedD
 [source,cypher]
 ----
 //Convert datetime string to Neo4j temporal
-WITH '2021-12-09 15:00:00' as sessionEnd
+WITH '2022-02-24 14:00:00' as sessionEnd
 RETURN apoc.temporal.toZonedTemporal(sessionEnd,'yyyy-MM-dd HH:mm:SS');
 ----
 
@@ -138,42 +146,28 @@ RETURN apoc.temporal.toZonedTemporal(sessionEnd,'yyyy-MM-dd HH:mm:SS');
 [source,cypher]
 ----
 //Duration between 2 datetimes (seconds results)
-WITH datetime('2021-12-09T10:00:00-05:00') as dayStart
+WITH datetime('2022-02-24T09:00:00-05:00') as dayStart
 RETURN duration.between(dayStart,datetime({timezone: 'America/New York'})) as contentPresented;
 ----
 
 [source,cypher]
 ----
-//Duration between 2 datetimes (time results)
-WITH datetime('2021-12-09T08:00:00-05:00') as workStart
-RETURN duration.between(workStart,datetime({timezone: 'America/New York'})) as worked;
-----
-
-[source,cypher]
-----
-//Duration hours
-WITH datetime('2021-12-09T08:00:00-05:00') as workStart
-RETURN duration(workStart,datetime({timezone: 'America/New York'})).hours as workHours;
-----
-
-[source,cypher]
-----
 //Duration hours (lossy value, not converting)
-WITH datetime('2021-12-06T08:00:00-05:00') as weekStart
+WITH datetime('2022-02-21T08:00:00-05:00') as weekStart
 RETURN duration.between(weekStart, datetime({timezone: 'America/New York'})) as worked, duration.between(weekStart, datetime({timezone: 'America/New York'})).hours as hours;
 ----
 
 [source,cypher]
 ----
 //Duration conversion to all seconds, translate to hours
-WITH datetime('2021-12-06T08:00:00-05:00') as weekStart
+WITH datetime('2022-02-21T08:00:00-05:00') as weekStart
 RETURN duration.inSeconds(weekStart,datetime({timezone: 'America/New York'})).hours as weekHours;
 ----
 
 [source,cypher]
 ----
 //Duration conversion to time, translate hours+minutes
-WITH datetime('2021-12-06T08:00:00-05:00') as weekStart
+WITH datetime('2022-02-21T08:00:00-05:00') as weekStart
 RETURN duration.between(weekStart, datetime({timezone: 'America/New York'})) as worked, duration.inSeconds(weekStart, datetime({timezone: 'America/New York'})).hours as hours, duration.inSeconds(weekStart, datetime({timezone: 'America/New York'})).minutesOfHour as minutes;
 ----
 
@@ -183,7 +177,7 @@ RETURN duration.between(weekStart, datetime({timezone: 'America/New York'})) as 
 ----
 //Non eager
 PROFILE
-MATCH (d:JConfDay)
+MATCH (d:ConfDay)
 RETURN d.date;
 ----
 
@@ -191,6 +185,6 @@ RETURN d.date;
 ----
 //Eager
 PROFILE
-MATCH (d:JConfDay)
+MATCH (d:ConfDay)
 RETURN d.date, count(*);
 ----

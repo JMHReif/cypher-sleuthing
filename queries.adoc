@@ -1,4 +1,4 @@
-= Queries
+= NODES 2021 demo queries
 
 == CASE:
 

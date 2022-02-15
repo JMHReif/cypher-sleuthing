@@ -1,4 +1,4 @@
-= KCDC demo queries
+= KCDC 2021 demo queries
 
 == Setup:
 
