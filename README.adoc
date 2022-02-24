@@ -6,6 +6,7 @@ Slides are published on SpeakerDeck and are linked below.
 
 == Presentations
 
+* https://speakerdeck.com/jmhreif/cypher-sleuthing-tips-and-tricks-for-querying-a-graph-4f3dc57b-4a54-42e8-b66c-3766c51ff360[ConFoo 2022^]
 * https://speakerdeck.com/jmhreif/cypher-sleuthing-tips-and-tricks-for-querying-a-graph-f6684db5-4ce2-46cb-a697-b684003ae2d1[DevoxxUK 2021^]
 * https://speakerdeck.com/jmhreif/cypher-sleuthing-taking-your-skills-to-the-next-level-94f0267d-5350-442b-ba59-6b19b550e2b2[KCDC 2021^]
 * https://speakerdeck.com/jmhreif/cypher-sleuthing-taking-your-skills-to-the-next-level[NODES 2021^]
